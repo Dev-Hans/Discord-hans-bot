@@ -1,0 +1,114 @@
+import discord
+import os
+import random
+from replit import db
+from keep_alive import keep_alive
+
+client = discord.Client()
+
+bad_words = [/add strings]
+
+good_moderation = [/add strings]
+
+if "responding" not in db.keys():
+  db["responding"] = True
+
+def update_moderation(moderation_message):
+  if "moderation" in db.keys():
+    moderation = db["moderation"]
+    moderation.append(moderation_message)
+    db["moderation"] = moderation
+  else:
+    db["moderation"] = [moderation_message]
+
+def update_word(word_message):
+  if "word" in db.keys():
+    word = db["word"]
+    word.append(word_message)
+    db["word"] = word
+  else:
+    db["word"] = [word_message]
+
+def delete_moderation(index):
+  moderation = db["moderation"]
+  if len(moderation) > index:
+    del moderation[index]
+    db["moderation"] = moderation
+
+def delete_word(index):
+  word = db["word"]
+  if len(word) > index:
+    del word[index]
+    db["word"] = word
+
+@client.event
+async def on_ready():
+  print('We have logged in as {0.user}'.format(client))
+
+@client.event
+async def on_message(message):
+  if message.author == client.user:
+    return
+
+  msg = message.content
+
+  if msg.startswith('$hello'):
+    await message.channel.send('Hello!')
+
+  if msg.startswith('$hi'):
+    await message.channel.send('Hi!')
+
+  if message.content.startswith('$wyd'):
+    await message.channel.send('rolling')
+
+  if msg.startswith('$howareyou'):
+    await message.channel.send("I'm hungry, feed me bananas please.")
+
+  if msg.startswith('$help'):
+    await message.channel.send("I don't help")
+
+  
+  if db["responding"]:
+    options = good_moderation
+    if "moderation" in db.keys():
+      options = options + db["moderation"]
+  
+  if db["responding"]:
+    worst_word = bad_words
+    if "word" in db.keys():
+      worst_word = worst_word + db["word"] 
+    
+    if any(word in msg for word in worst_word):
+      await message.channel.send(random.choice(options))
+
+  if msg.startswith("$new"):
+    moderation_message = msg.split("$new ",1)[1]
+    update_moderation(moderation_message)
+    await message.channel.send("New moderation added.")
+  
+  if msg.startswith("$add"):
+    word_message = msg.split("$add ",1)[1]
+    update_word(word_message)
+    await message.channel.send("New word added.")
+  
+  if msg.startswith("$del"):
+    moderation = []
+    if "moderation" in db.keys():
+      index = int(msg.split("$del ",1)[1])
+      delete_moderation(index)
+      moderation = db["moderation"]
+    await message.channel.send(moderation)
+
+  if msg.startswith("$responding"):
+    value = msg.split("$responding ",1)[1]
+    if value.lower() == "true":
+      db["responding"] = True
+      await message.channel.send("Responding is on.")
+    else:
+      db["responding"] = False
+      await message.channel.send("Responding is off.") 
+
+keep_alive()
+client.run(os.getenv('TOKEN'))
+
+
